@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"; // 导入 ref 和 watch 用于状态管理和数据监听
+import { ref, watch, onMounted, onUnmounted } from "vue"; // 导入 ref 和 watch 用于状态管理和数据监听
 import { useAuthStore } from "@/stores/auth"; // Import the auth store
 import CurrentTimeDisplay from "@/components/CurrentTimeDisplay.vue";
 
@@ -205,217 +205,293 @@ const handleLogout = () => {
     // Assuming authStore has a logout method that clears state/cache
     authStore.logout();
 };
+
+// Heartbeat state
+const isHeartbeatActive = ref(true);
+const heartbeatStatus = ref('Checking...');
+let heartbeatInterval: number | null = null;
+
+// Function to check server connection
+const checkServerConnection = async () => {
+  try {
+    const response = await fetch('https://oryjk.cn:82/ticket-monitor/backend/api/order/testSimpleOrderByReqable/116692', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    heartbeatStatus.value = response.ok ? 'Connected' : 'Disconnected';
+  } catch (error) {
+    heartbeatStatus.value = 'Disconnected';
+  }
+};
+
+// Start heartbeat detection
+const startHeartbeat = () => {
+  if (heartbeatInterval !== null) return;
+  
+  isHeartbeatActive.value = true;
+  checkServerConnection(); // First check immediately
+  
+  heartbeatInterval = window.setInterval(() => {
+    checkServerConnection();
+  }, 3000);
+};
+
+// Stop heartbeat detection
+const stopHeartbeat = () => {
+  if (heartbeatInterval !== null) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+  isHeartbeatActive.value = false;
+};
+
+onMounted(() => {
+  startHeartbeat();
+});
+
+onUnmounted(() => {
+  stopHeartbeat();
+});
 </script>
 
 <template>
-    <div class="p-4">
-        <h1 class="text-2xl font-bold mb-4">我的信息</h1>
-        <div v-if="authStore.memberInfo" class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-                <div class="flex justify-center mb-6">
-                    <div class="avatar avatar-placeholder">
-                        <div class="bg-neutral text-neutral-content w-24 rounded-full flex items-center justify-center">
-                            <span class="text-3xl">{{
-                                authStore.memberInfo.member_name
-                            }}</span>
-                        </div>
-                    </div>
-                </div>
-                <CurrentTimeDisplay />
-                <!-- Edit button -->
-                <div class="flex justify-center mt-4">
-                    <button v-if="!isEditing" class="btn btn-outline btn-primary btn-sm" @click="toggleEditing">
-                        编辑信息
-                    </button>
-                </div>
-                <div class="divider"></div>
-                <!-- Optional separator -->
-                <p class="text-base py-1">
-                    <strong>License 密钥:</strong>
-                    {{ maskString(authStore.memberInfo.member_key) }}
-                </p>
-                <p class="text-base py-1">
-                    <strong>状态:</strong>
-                    <span class="badge badge-success ml-2">
-                        <svg class="size-[1em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                            <g fill="currentColor" stroke-linejoin="miter" stroke-linecap="butt">
-                                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-linecap="square"
-                                    stroke-miterlimit="10" stroke-width="2"></circle>
-                                <polyline points="7 13 10 16 17 8" fill="none" stroke="currentColor"
-                                    stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></polyline>
-                            </g>
-                        </svg>
-                        {{ authStore.memberInfo.member_status }}</span>
-                </p>
-                <p class="text-base py-1">
-                    <strong>邮件数量:</strong>
-                    <span class="badge badge-success ml-2">{{
-                        authStore.memberInfo.email_count
-                    }}</span>
-                </p>
-                <p class="text-base py-1">
-                    <strong>描述:</strong>
-                    {{ authStore.memberInfo.description || "无" }}
-                </p>
-
-                <!-- Name Field -->
-                <div class="form-control w-full max-w-xs py-1">
-                    <label class="label">
-                        <span class="label-text">姓名:</span>
-                    </label>
-                    <div v-if="isEditing">
-                        <input type="text" v-model="editingName" placeholder="请输入姓名"
-                            class="input input-bordered w-full max-w-xs input-sm" />
-                    </div>
-                    <div v-else class="py-2">
-                        <p class="text-base">
-                            {{ authStore.memberInfo.member_name || "N/A" }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Phone Field -->
-                <div class="form-control w-full max-w-xs py-1">
-                    <label class="label">
-                        <span class="label-text">电话:</span>
-                    </label>
-                    <div v-if="isEditing">
-                        <input type="tel" v-model="editingPhone" placeholder="请输入电话号码"
-                            class="input input-bordered w-full max-w-xs input-sm" />
-                    </div>
-                    <div v-else class="py-2">
-                        <p class="text-base">
-                            {{ authStore.memberInfo.phone || "N/A" }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Email Field -->
-                <div class="form-control w-full max-w-xs py-1">
-                    <label class="label">
-                        <span class="label-text">邮箱:</span>
-                    </label>
-                    <div v-if="isEditing" class="flex items-center gap-2">
-                        <input type="email" v-model="editingEmail" placeholder="请输入邮箱地址"
-                            class="input input-bordered w-full max-w-xs input-sm flex-grow" />
-                        <button class="btn btn-xs btn-outline btn-primary" @click="sendTestEmail"
-                            :disabled="isSendingEmail || !editingEmail" :class="{
-                                loading: isSendingEmail,
-                                'btn-disabled': isSendingEmail || !editingEmail,
-                            }">
-                            <span v-if="isSendingEmail"></span>
-                            <!-- DaisyUI loading spinner placeholder -->
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                class="size-4 fill-current">
-                                <path
-                                    d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z">
-                                </path>
-                            </svg>
-                            <!-- Mail icon -->
-                            测试邮件
-                        </button>
-                    </div>
-                    <div v-else class="py-2 flex items-center gap-2">
-                        <p class="text-base">
-                            {{ authStore.memberInfo.email || "N/A" }}
-                        </p>
-                        <button class="btn btn-xs btn-outline btn-primary" @click="sendTestEmail" :disabled="isSendingEmail || !authStore.memberInfo?.email
-                            " :class="{
-                                loading: isSendingEmail,
-                                'btn-disabled':
-                                    isSendingEmail ||
-                                    !authStore.memberInfo?.email,
-                            }">
-                            <span v-if="isSendingEmail"></span>
-                            <!-- DaisyUI loading spinner placeholder -->
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                class="size-4 fill-current">
-                                <path
-                                    d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z">
-                                </path>
-                            </svg>
-                            <!-- Mail icon -->
-                            测试邮件
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Email sending status message -->
-                <p v-if="emailMessage" :class="{
-                    'text-success': isEmailSuccess,
-                    'text-error': !isEmailSuccess,
-                    'text-base py-1': true,
-                }" class="text-sm ml-2 py-1">
-                    {{ emailMessage }}
-                </p>
-
-                <!-- Update/Cancel Buttons (only visible in editing mode) -->
-                <div v-if="isEditing" class="py-2 flex gap-2">
-                    <button class="btn btn-primary" @click="updateUserInfo" :disabled="isUpdating" :class="{
-                        loading: isUpdating,
-                        'btn-disabled': isUpdating,
-                    }">
-                        <span v-if="isUpdating"></span>
-                        更新信息
-                    </button>
-                    <button class="btn btn-outline btn-secondary" @click="cancelEditing" :disabled="isUpdating">
-                        取消
-                    </button>
-                </div>
-
-                <!-- Update status message -->
-                <p v-if="updateMessage" :class="{
-                    'text-success': isUpdateSuccess,
-                    'text-error': !isUpdateSuccess,
-                    'text-base py-1': true,
-                }" class="text-sm mt-2 py-1">
-                    {{ updateMessage }}
-                </p>
-
-                <p class="text-base py-1 mt-4">
-                    <strong>MAC 地址:</strong>
-                    {{ maskString(authStore.memberInfo.mac_address) }}
-                </p>
-                <p class="text-base py-1">
-                    <strong>创建时间:</strong>
-                    {{
-                        authStore.memberInfo.create_at
-                            ? new Date(
-                                authStore.memberInfo.create_at,
-                            ).toLocaleString()
-                            : "N/A"
-                    }}
-                </p>
-                <p class="text-base py-1">
-                    <strong>更新时间:</strong>
-                    {{
-                        authStore.memberInfo.update_at
-                            ? new Date(
-                                authStore.memberInfo.update_at,
-                            ).toLocaleString()
-                            : "N/A"
-                    }}
-                </p>
-
-                <!-- Logout Button -->
-                <div class="py-4 text-center">
-                    <button class="btn btn-error" @click="handleLogout">
-                        退出登录
-                    </button>
-                </div>
+  <div class="p-4">
+    <h1 class="text-2xl font-bold mb-4">我的信息</h1>
+    <div v-if="authStore.memberInfo" class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex justify-center mb-6">
+          <div class="avatar avatar-placeholder">
+            <div class="bg-neutral text-neutral-content w-24 rounded-full flex items-center justify-center">
+              <span class="text-3xl">{{
+                authStore.memberInfo.member_name
+              }}</span>
             </div>
+          </div>
         </div>
-        <div v-else>
-            <p>无法加载会员信息。</p>
+        <div class="flex justify-between items-center mt-4">
+          <CurrentTimeDisplay />
+          
+          <!-- Heartbeat status display -->
+          <div class="flex items-center transition-all duration-500 ease-in-out transform hover:scale-110" 
+               :class="{ 'pulse-animation': heartbeatStatus === 'Connected' }">
+            <span class="text-sm mr-2">服务器连接:</span>
+            <div class="indicator-item badge badge-md"
+                 :class="{
+                   'badge-success': heartbeatStatus === 'Connected',
+                   'badge-error': heartbeatStatus === 'Disconnected'
+                 }">
+              {{ heartbeatStatus }}
+            </div>
+          </div>
         </div>
+        
+        <!-- Edit button -->
+        <div class="flex justify-center mt-4">
+          <button v-if="!isEditing" class="btn btn-outline btn-primary btn-sm" @click="toggleEditing">
+            编辑信息
+          </button>
+        </div>
+        <div class="divider"></div>
+        <!-- Optional separator -->
+        <p class="text-base py-1">
+          <strong>License 密钥:</strong>
+          {{ maskString(authStore.memberInfo.member_key) }}
+        </p>
+        <p class="text-base py-1">
+          <strong>状态:</strong>
+          <span class="badge badge-success ml-2">
+            <svg class="size-[1em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <g fill="currentColor" stroke-linejoin="miter" stroke-linecap="butt">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-linecap="square"
+                  stroke-miterlimit="10" stroke-width="2"></circle>
+                <polyline points="7 13 10 16 17 8" fill="none" stroke="currentColor"
+                  stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></polyline>
+              </g>
+            </svg>
+            {{ authStore.memberInfo.member_status }}</span>
+        </p>
+        <p class="text-base py-1">
+          <strong>邮件数量:</strong>
+          <span class="badge badge-success ml-2">{{
+            authStore.memberInfo.email_count
+          }}</span>
+        </p>
+        <p class="text-base py-1">
+          <strong>描述:</strong>
+          {{ authStore.memberInfo.description || "无" }}
+        </p>
+
+        <!-- Name Field -->
+        <div class="form-control w-full max-w-xs py-1">
+          <label class="label">
+            <span class="label-text">姓名:</span>
+          </label>
+          <div v-if="isEditing">
+            <input type="text" v-model="editingName" placeholder="请输入姓名"
+              class="input input-bordered w-full max-w-xs input-sm" />
+          </div>
+          <div v-else class="py-2">
+            <p class="text-base">
+              {{ authStore.memberInfo.member_name || "N/A" }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Phone Field -->
+        <div class="form-control w-full max-w-xs py-1">
+          <label class="label">
+            <span class="label-text">电话:</span>
+          </label>
+          <div v-if="isEditing">
+            <input type="tel" v-model="editingPhone" placeholder="请输入电话号码"
+              class="input input-bordered w-full max-w-xs input-sm" />
+          </div>
+          <div v-else class="py-2">
+            <p class="text-base">
+              {{ authStore.memberInfo.phone || "N/A" }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Email Field -->
+        <div class="form-control w-full max-w-xs py-1">
+          <label class="label">
+            <span class="label-text">邮箱:</span>
+          </label>
+          <div v-if="isEditing" class="flex items-center gap-2">
+            <input type="email" v-model="editingEmail" placeholder="请输入邮箱地址"
+              class="input input-bordered w-full max-w-xs input-sm flex-grow" />
+            <button class="btn btn-xs btn-outline btn-primary" @click="sendTestEmail"
+              :disabled="isSendingEmail || !editingEmail" :class="{
+                loading: isSendingEmail,
+                'btn-disabled': isSendingEmail || !editingEmail,
+              }">
+              <span v-if="isSendingEmail"></span>
+              <!-- DaisyUI loading spinner placeholder -->
+              <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                class="size-4 fill-current">
+                <path
+                  d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z">
+                </path>
+              </svg>
+              <!-- Mail icon -->
+              测试邮件
+            </button>
+          </div>
+          <div v-else class="py-2 flex items-center gap-2">
+            <p class="text-base">
+              {{ authStore.memberInfo.email || "N/A" }}
+            </p>
+            <button class="btn btn-xs btn-outline btn-primary" @click="sendTestEmail" :disabled="isSendingEmail || !authStore.memberInfo?.email
+              " :class="{
+                loading: isSendingEmail,
+                'btn-disabled':
+                  isSendingEmail ||
+                  !authStore.memberInfo?.email,
+              }">
+              <span v-if="isSendingEmail"></span>
+              <!-- DaisyUI loading spinner placeholder -->
+              <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                class="size-4 fill-current">
+                <path
+                  d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z">
+                </path>
+              </svg>
+              <!-- Mail icon -->
+              测试邮件
+            </button>
+          </div>
+        </div>
+
+        <!-- Email sending status message -->
+        <p v-if="emailMessage" :class="{
+          'text-success': isEmailSuccess,
+          'text-error': !isEmailSuccess,
+          'text-base py-1': true,
+        }" class="text-sm ml-2 py-1">
+          {{ emailMessage }}
+        </p>
+
+        <!-- Update/Cancel Buttons (only visible in editing mode) -->
+        <div v-if="isEditing" class="py-2 flex gap-2">
+          <button class="btn btn-primary" @click="updateUserInfo" :disabled="isUpdating" :class="{
+            loading: isUpdating,
+            'btn-disabled': isUpdating,
+          }">
+            <span v-if="isUpdating"></span>
+            更新信息
+          </button>
+          <button class="btn btn-outline btn-secondary" @click="cancelEditing" :disabled="isUpdating">
+            取消
+          </button>
+        </div>
+
+        <!-- Update status message -->
+        <p v-if="updateMessage" :class="{
+          'text-success': isUpdateSuccess,
+          'text-error': !isUpdateSuccess,
+          'text-base py-1': true,
+        }" class="text-sm mt-2 py-1">
+          {{ updateMessage }}
+        </p>
+
+        <p class="text-base py-1 mt-4">
+          <strong>MAC 地址:</strong>
+          {{ maskString(authStore.memberInfo.mac_address) }}
+        </p>
+        <p class="text-base py-1">
+          <strong>创建时间:</strong>
+          {{
+            authStore.memberInfo.create_at
+              ? new Date(
+                  authStore.memberInfo.create_at,
+                ).toLocaleString()
+              : "N/A"
+          }}
+        </p>
+        <p class="text-base py-1">
+          <strong>更新时间:</strong>
+          {{
+            authStore.memberInfo.update_at
+              ? new Date(
+                  authStore.memberInfo.update_at,
+                ).toLocaleString()
+              : "N/A"
+          }}
+        </p>
+
+        <!-- Logout Button -->
+        <div class="py-4 text-center">
+          <button class="btn btn-error" @click="handleLogout">
+            退出登录
+          </button>
+        </div>
+      </div>
     </div>
+    <div v-else>
+      <p>无法加载会员信息。</p>
+    </div>
+  </div>
 </template>
 
 <style scoped>
 /* Add component-specific styles here */
+.pulse-animation {
+  animation: pulse 3s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
 /* If you need to adjust spacing/alignment more precisely */
 .flex-wrap {
-    flex-wrap: wrap;
-    /* Allows items to wrap on smaller screens */
+  flex-wrap: wrap;
+  /* Allows items to wrap on smaller screens */
 }
 </style>
