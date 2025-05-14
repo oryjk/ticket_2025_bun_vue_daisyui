@@ -214,9 +214,7 @@ const handleLogout = () => {
             <div class="card-body">
                 <div class="flex justify-center mb-6">
                     <div class="avatar avatar-placeholder">
-                        <div
-                            class="bg-neutral text-neutral-content w-24 rounded-full flex items-center justify-center"
-                        >
+                        <div class="bg-neutral text-neutral-content w-24 rounded-full flex items-center justify-center">
                             <span class="text-3xl">{{
                                 authStore.memberInfo.member_name
                             }}</span>
@@ -226,11 +224,7 @@ const handleLogout = () => {
                 <CurrentTimeDisplay />
                 <!-- Edit button -->
                 <div class="flex justify-center mt-4">
-                    <button
-                        v-if="!isEditing"
-                        class="btn btn-outline btn-primary btn-sm"
-                        @click="toggleEditing"
-                    >
+                    <button v-if="!isEditing" class="btn btn-outline btn-primary btn-sm" @click="toggleEditing">
                         编辑信息
                     </button>
                 </div>
@@ -243,38 +237,15 @@ const handleLogout = () => {
                 <p class="text-base py-1">
                     <strong>状态:</strong>
                     <span class="badge badge-success ml-2">
-                        <svg
-                            class="size-[1em]"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                        >
-                            <g
-                                fill="currentColor"
-                                stroke-linejoin="miter"
-                                stroke-linecap="butt"
-                            >
-                                <circle
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-linecap="square"
-                                    stroke-miterlimit="10"
-                                    stroke-width="2"
-                                ></circle>
-                                <polyline
-                                    points="7 13 10 16 17 8"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-linecap="square"
-                                    stroke-miterlimit="10"
-                                    stroke-width="2"
-                                ></polyline>
+                        <svg class="size-[1em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g fill="currentColor" stroke-linejoin="miter" stroke-linecap="butt">
+                                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-linecap="square"
+                                    stroke-miterlimit="10" stroke-width="2"></circle>
+                                <polyline points="7 13 10 16 17 8" fill="none" stroke="currentColor"
+                                    stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></polyline>
                             </g>
                         </svg>
-                        {{ authStore.memberInfo.member_status }}</span
-                    >
+                        {{ authStore.memberInfo.member_status }}</span>
                 </p>
                 <p class="text-base py-1">
                     <strong>邮件数量:</strong>
@@ -293,12 +264,8 @@ const handleLogout = () => {
                         <span class="label-text">姓名:</span>
                     </label>
                     <div v-if="isEditing">
-                        <input
-                            type="text"
-                            v-model="editingName"
-                            placeholder="请输入姓名"
-                            class="input input-bordered w-full max-w-xs input-sm"
-                        />
+                        <input type="text" v-model="editingName" placeholder="请输入姓名"
+                            class="input input-bordered w-full max-w-xs input-sm" />
                     </div>
                     <div v-else class="py-2">
                         <p class="text-base">
@@ -313,12 +280,8 @@ const handleLogout = () => {
                         <span class="label-text">电话:</span>
                     </label>
                     <div v-if="isEditing">
-                        <input
-                            type="tel"
-                            v-model="editingPhone"
-                            placeholder="请输入电话号码"
-                            class="input input-bordered w-full max-w-xs input-sm"
-                        />
+                        <input type="tel" v-model="editingPhone" placeholder="请输入电话号码"
+                            class="input input-bordered w-full max-w-xs input-sm" />
                     </div>
                     <div v-else class="py-2">
                         <p class="text-base">
@@ -333,32 +296,20 @@ const handleLogout = () => {
                         <span class="label-text">邮箱:</span>
                     </label>
                     <div v-if="isEditing" class="flex items-center gap-2">
-                        <input
-                            type="email"
-                            v-model="editingEmail"
-                            placeholder="请输入邮箱地址"
-                            class="input input-bordered w-full max-w-xs input-sm flex-grow"
-                        />
-                        <button
-                            class="btn btn-xs btn-outline btn-primary"
-                            @click="sendTestEmail"
-                            :disabled="isSendingEmail || !editingEmail"
-                            :class="{
+                        <input type="email" v-model="editingEmail" placeholder="请输入邮箱地址"
+                            class="input input-bordered w-full max-w-xs input-sm flex-grow" />
+                        <button class="btn btn-xs btn-outline btn-primary" @click="sendTestEmail"
+                            :disabled="isSendingEmail || !editingEmail" :class="{
                                 loading: isSendingEmail,
                                 'btn-disabled': isSendingEmail || !editingEmail,
-                            }"
-                        >
+                            }">
                             <span v-if="isSendingEmail"></span>
                             <!-- DaisyUI loading spinner placeholder -->
-                            <svg
-                                v-else
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                class="size-4 fill-current"
-                            >
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                                class="size-4 fill-current">
                                 <path
-                                    d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z"
-                                ></path>
+                                    d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z">
+                                </path>
                             </svg>
                             <!-- Mail icon -->
                             测试邮件
@@ -368,30 +319,20 @@ const handleLogout = () => {
                         <p class="text-base">
                             {{ authStore.memberInfo.email || "N/A" }}
                         </p>
-                        <button
-                            class="btn btn-xs btn-outline btn-primary"
-                            @click="sendTestEmail"
-                            :disabled="
-                                isSendingEmail || !authStore.memberInfo?.email
-                            "
-                            :class="{
+                        <button class="btn btn-xs btn-outline btn-primary" @click="sendTestEmail" :disabled="isSendingEmail || !authStore.memberInfo?.email
+                            " :class="{
                                 loading: isSendingEmail,
                                 'btn-disabled':
                                     isSendingEmail ||
                                     !authStore.memberInfo?.email,
-                            }"
-                        >
+                            }">
                             <span v-if="isSendingEmail"></span>
                             <!-- DaisyUI loading spinner placeholder -->
-                            <svg
-                                v-else
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                class="size-4 fill-current"
-                            >
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                                class="size-4 fill-current">
                                 <path
-                                    d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z"
-                                ></path>
+                                    d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5l-8-5h16zm0 12H4V8l8 5l8-5v10z">
+                                </path>
                             </svg>
                             <!-- Mail icon -->
                             测试邮件
@@ -400,51 +341,34 @@ const handleLogout = () => {
                 </div>
 
                 <!-- Email sending status message -->
-                <p
-                    v-if="emailMessage"
-                    :class="{
-                        'text-success': isEmailSuccess,
-                        'text-error': !isEmailSuccess,
-                        'text-base py-1': true,
-                    }"
-                    class="text-sm ml-2 py-1"
-                >
+                <p v-if="emailMessage" :class="{
+                    'text-success': isEmailSuccess,
+                    'text-error': !isEmailSuccess,
+                    'text-base py-1': true,
+                }" class="text-sm ml-2 py-1">
                     {{ emailMessage }}
                 </p>
 
                 <!-- Update/Cancel Buttons (only visible in editing mode) -->
                 <div v-if="isEditing" class="py-2 flex gap-2">
-                    <button
-                        class="btn btn-primary"
-                        @click="updateUserInfo"
-                        :disabled="isUpdating"
-                        :class="{
-                            loading: isUpdating,
-                            'btn-disabled': isUpdating,
-                        }"
-                    >
+                    <button class="btn btn-primary" @click="updateUserInfo" :disabled="isUpdating" :class="{
+                        loading: isUpdating,
+                        'btn-disabled': isUpdating,
+                    }">
                         <span v-if="isUpdating"></span>
                         更新信息
                     </button>
-                    <button
-                        class="btn btn-outline btn-secondary"
-                        @click="cancelEditing"
-                        :disabled="isUpdating"
-                    >
+                    <button class="btn btn-outline btn-secondary" @click="cancelEditing" :disabled="isUpdating">
                         取消
                     </button>
                 </div>
 
                 <!-- Update status message -->
-                <p
-                    v-if="updateMessage"
-                    :class="{
-                        'text-success': isUpdateSuccess,
-                        'text-error': !isUpdateSuccess,
-                        'text-base py-1': true,
-                    }"
-                    class="text-sm mt-2 py-1"
-                >
+                <p v-if="updateMessage" :class="{
+                    'text-success': isUpdateSuccess,
+                    'text-error': !isUpdateSuccess,
+                    'text-base py-1': true,
+                }" class="text-sm mt-2 py-1">
                     {{ updateMessage }}
                 </p>
 
@@ -457,8 +381,8 @@ const handleLogout = () => {
                     {{
                         authStore.memberInfo.create_at
                             ? new Date(
-                                  authStore.memberInfo.create_at,
-                              ).toLocaleString()
+                                authStore.memberInfo.create_at,
+                            ).toLocaleString()
                             : "N/A"
                     }}
                 </p>
@@ -467,20 +391,17 @@ const handleLogout = () => {
                     {{
                         authStore.memberInfo.update_at
                             ? new Date(
-                                  authStore.memberInfo.update_at,
-                              ).toLocaleString()
+                                authStore.memberInfo.update_at,
+                            ).toLocaleString()
                             : "N/A"
                     }}
                 </p>
 
                 <!-- Logout Button -->
                 <div class="py-4 text-center">
-                     <button
-                        class="btn btn-error"
-                        @click="handleLogout"
-                     >
+                    <button class="btn btn-error" @click="handleLogout">
                         退出登录
-                     </button>
+                    </button>
                 </div>
             </div>
         </div>
