@@ -136,6 +136,49 @@ watch(
     },
     {immediate: false}, // Do not run immediately, onMounted handles the initial fetch if matchId is present
 );
+
+const deleteOrder = async (id: number, orderId: string) => {
+  const license = authStore.memberInfo?.member_key;
+
+  if (!license) {
+    alert('无法获取 License 信息，请尝试重新登录。');
+    return;
+  }
+
+  if (!orderId) {
+    alert('缺少订单 ID，无法删除订单。');
+    return;
+  }
+
+  if (!confirm(`确定要删除订单 ${orderId} 吗？`)) {
+    return;
+  }
+
+  try {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/order/delete-order?licence_key=${encodeURIComponent(license.trim())}`;
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id,
+        orderId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || `删除订单失败 (状态码: ${response.status})`);
+    }
+
+    // 删除成功后刷新当前 matchId 的订单
+    await fetchOrders(props.matchId);
+  } catch (error: any) {
+    alert(error.message || '删除订单时发生错误。');
+  }
+};
 </script>
 
 <template>
@@ -154,11 +197,23 @@ watch(
     </div>
 
     <div v-else>
+      <!-- 添加手动刷新按钮 -->
+      <div class="flex justify-end mb-4">
+        <button 
+          class="btn btn-primary btn-sm"
+          @click="fetchOrders(props.matchId)"
+          :disabled="isLoadingOrders"
+        >
+          <i class="ri-refresh-line"></i>
+          手动刷新
+        </button>
+      </div>
+
       <!-- Display grouped orders -->
       <div
-          v-for="(orderGroup, wechatUid) in groupedOrders"
-          :key="wechatUid"
-          class="mb-6"
+        v-for="(orderGroup, wechatUid) in groupedOrders"
+        :key="wechatUid"
+        class="mb-6"
       >
         <div class="collapse collapse-arrow bg-base-200">
           <input type="checkbox" :id="`collapse-${wechatUid}`"/>
@@ -168,9 +223,9 @@ watch(
           </div>
           <div class="collapse-content">
             <div
-                v-for="order in orderGroup"
-                :key="order.id"
-                class="card bordered bg-base-100 shadow-sm my-4"
+              v-for="order in orderGroup"
+              :key="order.id"
+              class="card bordered bg-base-100 shadow-sm my-4"
             >
               <div class="card-body p-4">
                 <h3 class="card-title text-lg mb-2">
@@ -190,9 +245,17 @@ watch(
                 </p>
                 <p class="text-sm">
                   <strong>状态:</strong>
-                  <span class="badge badge-info ml-1">{{
-                      order.orderStatus
-                    }}</span>
+                  <span 
+                    class="badge ml-1"
+                    :class="{
+                      'badge-warning': order.orderStatus === '进行中',
+                      'badge-success': order.orderStatus === '成功抢票',
+                      'badge-error': order.orderStatus === '订单失败',
+                      'badge-ghost': order.orderStatus === '订单已删除',
+                      'badge-info': order.orderStatus === '特殊渠道',
+                      'badge-primary': order.orderStatus === '闪电订单'
+                    }"
+                  >{{ order.orderStatus }}</span>
                 </p>
                 <p class="text-sm">
                   <strong class="mr-1">比赛ID:</strong>
@@ -220,6 +283,14 @@ watch(
                 </p>
                 <!-- You can display more order details here -->
                 <!-- <pre class="text-xs mt-2">{{ order.orderPayload }}</pre> -->
+              </div>
+              <div class="card-actions justify-end mt-4">
+                <button 
+                  class="btn btn-error btn-xs text-white"
+                  @click="deleteOrder(order.id, order.orderId)"
+                >
+                  删除订单
+                </button>
               </div>
             </div>
           </div>
