@@ -29,6 +29,9 @@ const orders = ref<OrderRequest[]>([]);
 const isLoadingOrders = ref(false);
 const ordersError = ref<string | null>(null);
 
+// Define tab filter for order status
+const selectedStatus = ref<string | null>(null); // Track the selected status filter
+
 // Function to fetch orders based on matchId
 const fetchOrders = async (matchId: string | null | undefined) => {
   const license = authStore.memberInfo?.member_key;
@@ -89,8 +92,12 @@ const fetchOrders = async (matchId: string | null | undefined) => {
 const groupedOrders = computed(() => {
   if (!orders.value || orders.value.length === 0) return {};
 
+  const filteredOrders = selectedStatus.value
+    ? orders.value.filter(order => order.orderStatus === selectedStatus.value)
+    : orders.value;
+
   const groups: { [key: number]: OrderRequest[] } = {};
-  orders.value.forEach((order) => {
+  filteredOrders.forEach((order) => {
     if (!groups[order.wechatUid]) {
       groups[order.wechatUid] = [];
     }
@@ -188,12 +195,14 @@ const deleteOrder = async (id: number, orderId: string) => {
       <span class="loading loading-spinner loading-lg ml-2"></span>
     </div>
 
-    <div v-else-if="ordersError" class="text-center text-error">
-      {{ ordersError }}
+    <div v-else-if="ordersError" class="alert alert-error text-white text-center mb-4">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ ordersError }}</span>
     </div>
 
-    <div v-else-if="orders.length === 0" class="text-center text-gray-500">
-      没有找到订单。
+    <div v-else-if="orders.length === 0" class="alert alert-info text-center mb-4">
+      <i class="ri-information-line"></i>
+      <span>没有找到订单。</span>
     </div>
 
     <div v-else>
@@ -207,6 +216,45 @@ const deleteOrder = async (id: number, orderId: string) => {
           <i class="ri-refresh-line"></i>
           手动刷新
         </button>
+      </div>
+
+      <!-- Add tab control for filtering orders by status -->
+      <div class="tabs tabs-boxed mb-4">
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === null }" 
+          @click="selectedStatus = null"
+        >全部</a>
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === '进行中' }" 
+          @click="selectedStatus = '进行中'"
+        >进行中</a>
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === '闪电订单' }" 
+          @click="selectedStatus = '闪电订单'"
+        >闪电订单</a>
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === '成功抢票' }" 
+          @click="selectedStatus = '成功抢票'"
+        >成功抢票</a>
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === '订单失败' }" 
+          @click="selectedStatus = '订单失败'"
+        >订单失败</a>
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === '订单已删除' }" 
+          @click="selectedStatus = '订单已删除'"
+        >订单已删除</a>
+        <a 
+          class="tab" 
+          :class="{ 'tab-active': selectedStatus === '特殊渠道' }" 
+          @click="selectedStatus = '特殊渠道'"
+        >特殊渠道</a>
       </div>
 
       <!-- Display grouped orders -->
