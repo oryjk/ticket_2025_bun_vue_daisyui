@@ -29,8 +29,11 @@ const orders = ref<OrderRequest[]>([]);
 const isLoadingOrders = ref(false);
 const ordersError = ref<string | null>(null);
 
-// Define tab filter for order status
-const selectedStatus = ref<string | null>(null); // Track the selected status filter
+// Track selected orders for batch deletion
+const selectedOrders = ref<{ id: number; orderId: string }[]>([]); // 新增：用于批量删除的选中订单
+
+// Track the selected status filter
+const selectedStatus = ref<string | null>(null); // 添加：用于订单状态筛选
 
 // Function to fetch orders based on matchId
 const fetchOrders = async (matchId: string | null | undefined) => {
@@ -84,6 +87,7 @@ const fetchOrders = async (matchId: string | null | undefined) => {
   } catch (error: any) {
     ordersError.value = error.message || "加载订单时发生错误。";
   } finally {
+    selectedOrders.value = [];
     isLoadingOrders.value = false;
   }
 };
@@ -93,8 +97,8 @@ const groupedOrders = computed(() => {
   if (!orders.value || orders.value.length === 0) return {};
 
   const filteredOrders = selectedStatus.value
-    ? orders.value.filter(order => order.orderStatus === selectedStatus.value)
-    : orders.value;
+      ? orders.value.filter(order => order.orderStatus === selectedStatus.value)
+      : orders.value;
 
   const groups: { [key: number]: OrderRequest[] } = {};
   filteredOrders.forEach((order) => {
@@ -186,6 +190,49 @@ const deleteOrder = async (id: number, orderId: string) => {
     alert(error.message || '删除订单时发生错误。');
   }
 };
+
+// 新增：批量删除选中的订单
+const deleteSelectedOrders = async () => {
+  if (selectedOrders.value.length === 0) return;
+
+  const license = authStore.memberInfo?.member_key;
+
+  if (!license) {
+    alert('无法获取 License 信息，请尝试重新登录。');
+    return;
+  }
+
+  const confirmMessage = `确定要删除选中的 ${selectedOrders.value.length} 条订单吗？`;
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/order/delete-order?licence_key=${encodeURIComponent(license.trim())}`;
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        // 支持后端可能需要的多个订单删除结构
+        orders: selectedOrders.value,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || `批量删除失败 (状态码: ${response.status})`);
+    }
+
+    // 清空已选中的订单并刷新数据
+    selectedOrders.value = [];
+    await fetchOrders(props.matchId);
+  } catch (error: any) {
+    alert(error.message || '批量删除时发生错误。');
+  }
+};
 </script>
 
 <template>
@@ -208,77 +255,100 @@ const deleteOrder = async (id: number, orderId: string) => {
     <div v-else>
       <!-- 添加手动刷新按钮 -->
       <div class="flex justify-end mb-4">
-        <button 
-          class="btn btn-primary btn-sm"
-          @click="fetchOrders(props.matchId)"
-          :disabled="isLoadingOrders"
+        <button
+            class="btn btn-primary btn-sm"
+            @click="fetchOrders(props.matchId)"
+            :disabled="isLoadingOrders"
         >
           <i class="ri-refresh-line"></i>
           手动刷新
         </button>
       </div>
 
+      <!-- 批量删除按钮 -->
+
+      <div v-if="selectedOrders.length > 0" class="flex justify-end mb-4">
+        <button
+            class="btn btn-error btn-sm text-white"
+            @click="deleteSelectedOrders"
+        >
+          批量删除 ({{ selectedOrders.length }})
+        </button>
+      </div>
+
       <!-- Add tab control for filtering orders by status -->
       <div class="tabs tabs-boxed mb-4">
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === null }" 
-          @click="selectedStatus = null"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === null }"
+            @click="selectedStatus = null"
         >全部</a>
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === '进行中' }" 
-          @click="selectedStatus = '进行中'"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === '进行中' }"
+            @click="selectedStatus = '进行中'"
         >进行中</a>
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === '闪电订单' }" 
-          @click="selectedStatus = '闪电订单'"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === '闪电订单' }"
+            @click="selectedStatus = '闪电订单'"
         >闪电订单</a>
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === '成功抢票' }" 
-          @click="selectedStatus = '成功抢票'"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === '成功抢票' }"
+            @click="selectedStatus = '成功抢票'"
         >成功抢票</a>
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === '订单失败' }" 
-          @click="selectedStatus = '订单失败'"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === '订单失败' }"
+            @click="selectedStatus = '订单失败'"
         >订单失败</a>
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === '订单已删除' }" 
-          @click="selectedStatus = '订单已删除'"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === '订单已删除' }"
+            @click="selectedStatus = '订单已删除'"
         >订单已删除</a>
-        <a 
-          class="tab" 
-          :class="{ 'tab-active': selectedStatus === '特殊渠道' }" 
-          @click="selectedStatus = '特殊渠道'"
+        <a
+            class="tab"
+            :class="{ 'tab-active': selectedStatus === '特殊渠道' }"
+            @click="selectedStatus = '特殊渠道'"
         >特殊渠道</a>
       </div>
 
       <!-- Display grouped orders -->
       <div
-        v-for="(orderGroup, wechatUid) in groupedOrders"
-        :key="wechatUid"
-        class="mb-6"
+          v-for="(orderGroup, wechatUid) in groupedOrders"
+          :key="wechatUid"
+          class="mb-6"
       >
         <div class="collapse collapse-arrow bg-base-200">
           <input type="checkbox" :id="`collapse-${wechatUid}`"/>
           <div class="collapse-title text-xl font-medium">
-            微信用户 ID: {{ wechatUid }} ({{ orderGroup.length }}
+            微信用户: {{ orderGroup[0].realname }} ({{ orderGroup.length }}
             条订单)
           </div>
           <div class="collapse-content">
             <div
-              v-for="order in orderGroup"
-              :key="order.id"
-              class="card bordered bg-base-100 shadow-sm my-4"
+                v-for="order in orderGroup"
+                :key="order.id"
+                class="card bordered shadow-md bg-base-100 my-4 transition-transform duration-200 hover:scale-105"
             >
               <div class="card-body p-4">
                 <h3 class="card-title text-lg mb-2">
                   订单 ID: {{ order.id }}
                 </h3>
+                <!-- 新增：订单选择复选框 -->
+                <div class="form-control">
+                  <label class="cursor-pointer label">
+                    <span class="label-text">{{ order.orderUserName }}</span>
+                    <input
+                        type="checkbox"
+                        class="checkbox checkbox-primary ml-2"
+                        :value="{ id: order.id, orderId: order.orderId }"
+                        v-model="selectedOrders"
+                    />
+                  </label>
+                </div>
                 <p class="text-sm">
                   <strong>微信名:</strong>
                   <span class="badge badge-info ml-1">{{
@@ -293,9 +363,9 @@ const deleteOrder = async (id: number, orderId: string) => {
                 </p>
                 <p class="text-sm">
                   <strong>状态:</strong>
-                  <span 
-                    class="badge ml-1"
-                    :class="{
+                  <span
+                      class="badge ml-1"
+                      :class="{
                       'badge-warning': order.orderStatus === '进行中',
                       'badge-success': order.orderStatus === '成功抢票',
                       'badge-error': order.orderStatus === '订单失败',
@@ -333,9 +403,9 @@ const deleteOrder = async (id: number, orderId: string) => {
                 <!-- <pre class="text-xs mt-2">{{ order.orderPayload }}</pre> -->
               </div>
               <div class="card-actions justify-end mt-4">
-                <button 
-                  class="btn btn-error btn-xs text-white"
-                  @click="deleteOrder(order.id, order.orderId)"
+                <button
+                    class="btn btn-error btn-xs text-white"
+                    @click="deleteOrder(order.id, order.orderId)"
                 >
                   删除订单
                 </button>
