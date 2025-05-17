@@ -174,8 +174,8 @@ const deleteOrder = async (id: number, orderId: string) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        id,
-        orderId,
+        // 支持后端可能需要的多个订单删除结构
+        orders: [{id, orderId}],
       }),
     });
 
